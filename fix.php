@@ -2,7 +2,7 @@
 require 'includes/bootstrap.php';
 
 $fix = mysqli_fetch_assoc(query(
-    'SELECT f.*,u.name FROM fixes f JOIN users u ON u.id=f.user_id WHERE f.id=? AND f.active=1 AND u.active=1',
+    'SELECT f.*,u.username FROM fixes f JOIN users u ON u.id=f.user_id WHERE f.id=? AND f.active=1 AND u.active=1',
     [(int)($_GET['id'] ?? 0)]
 ));
 if (!$fix) {
@@ -32,7 +32,7 @@ require 'includes/header.php';
     </h1>
     <p class="muted">
         Logged by
-        <?= e($fix['name']) ?>
+        <?= e($fix['username']) ?>
         · Updated
         <?= e(date('d M Y',strtotime($fix['updated_at']))) ?>
     </p>

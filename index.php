@@ -13,7 +13,7 @@ $total = (int)mysqli_fetch_row(query("SELECT COUNT(*) FROM fixes f JOIN users u 
 $pages = max(1, (int)ceil($total / 12));
 $page = min($page, $pages);
 $offset = ($page-1)*12;
-$fixes = mysqli_fetch_all(query("SELECT f.*, u.name FROM fixes f JOIN users u ON u.id=f.user_id WHERE $where ORDER BY f.fixed_on DESC, f.id DESC LIMIT 12 OFFSET $offset", $params), MYSQLI_ASSOC);
+$fixes = mysqli_fetch_all(query("SELECT f.*, u.username FROM fixes f JOIN users u ON u.id=f.user_id WHERE $where ORDER BY f.fixed_on DESC, f.id DESC LIMIT 12 OFFSET $offset", $params), MYSQLI_ASSOC);
 
 $pageTitle = 'The fix log';
 require 'includes/header.php';
@@ -142,7 +142,7 @@ require 'includes/header.php';
                     </p>
                     <small>
                         Logged by
-                        <?= e($fix['name']) ?>
+                        <?= e($fix['username']) ?>
                     </small>
                 </div>
                 <a class="read-link" href="fix.php?id=<?= $fix['id'] ?>">

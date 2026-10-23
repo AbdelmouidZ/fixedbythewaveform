@@ -16,7 +16,7 @@ require 'includes/header.php';
     </p>
     <h1>
         Hey,
-        <?= e($u['name']) ?>
+        <?= e($u['username']) ?>
         .
     </h1>
     <div class="section-heading">

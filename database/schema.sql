@@ -1,28 +1,34 @@
+-- Fresh installation schema for Fixed by Waveform.
+-- Accounts use a unique username and a password hash; no name or email is required.
+-- For an existing name/email database, run migrate_username_login.sql instead.
+-- Removing a contribution sets active = 0; restoring it sets active = 1.
+
 CREATE DATABASE IF NOT EXISTS fixedbywaveform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE fixedbywaveform;
+
 CREATE TABLE users (
- id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
- name VARCHAR(80) NOT NULL,
- email VARCHAR(190) NOT NULL UNIQUE,
- password_hash VARCHAR(255) NOT NULL,
- active TINYINT(1) NOT NULL DEFAULT 1,
- created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(190) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
+
 CREATE TABLE fixes (
- id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
- user_id BIGINT UNSIGNED NOT NULL,
- title VARCHAR(180) NOT NULL,
- product VARCHAR(100) NOT NULL,
- description TEXT NOT NULL,
- resolution TEXT NOT NULL,
- episode_url VARCHAR(2048) NOT NULL,
- evidence_url VARCHAR(2048) NOT NULL,
- mentioned_on DATE NOT NULL,
- fixed_on DATE NOT NULL,
- active TINYINT(1) NOT NULL DEFAULT 1,
- created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
- updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
- CONSTRAINT fk_fixes_user FOREIGN KEY (user_id) REFERENCES users(id),
- INDEX public_listing (active, fixed_on, id),
- INDEX owner_listing (user_id, active)
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    title VARCHAR(180) NOT NULL,
+    product VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    resolution TEXT NOT NULL,
+    episode_url VARCHAR(2048) NOT NULL,
+    evidence_url VARCHAR(2048) NOT NULL,
+    mentioned_on DATE NOT NULL,
+    fixed_on DATE NOT NULL,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_fixes_user FOREIGN KEY (user_id) REFERENCES users(id),
+    INDEX public_listing (active, fixed_on, id),
+    INDEX owner_listing (user_id, active)
 ) ENGINE=InnoDB;

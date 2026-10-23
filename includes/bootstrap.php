@@ -1,8 +1,20 @@
 <?php
 declare(strict_types=1);
 ini_set('session.use_strict_mode', '1');
-session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off', 'samesite' => 'Lax']);
-session_start();
+// Keep this application's session separate from other local PHP projects.
+session_name('fixedbywaveform_session');
+$cookie_path = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+$cookie_path = rtrim($cookie_path, '/') . '/';
+session_set_cookie_params([
+    'path' => $cookie_path,
+    'httponly' => true,
+    'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+    'samesite' => 'Lax',
+]);
+if (!session_start()) {
+    http_response_code(503);
+    exit('Unable to start a session. Check that PHP can write to its session.save_path directory.');
+}
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header("Content-Security-Policy: default-src 'self'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'");
@@ -39,7 +51,7 @@ function db() {
     }
     return $connection;
 }
-// SELECT queries return a result; writes return true. Registration may handle a duplicate email.
+// SELECT queries return a result; writes return true. Registration may handle a duplicate username.
 
 function query(string $sql, array $params = [], bool $allow_duplicate = false) {
     $connection = db();
@@ -83,7 +95,7 @@ function user(): ?array {
         $loaded = true;
         if (isset($_SESSION['user_id'])) {
             $user = mysqli_fetch_assoc(query(
-                'SELECT id, name FROM users WHERE id = ? AND active = 1',
+                'SELECT id, username FROM users WHERE id = ? AND active = 1',
                 [$_SESSION['user_id']]
             )) ?: null;
         }
@@ -112,11 +124,43 @@ function token_field(): void {
     echo '<input type="hidden" name="csrf" value="' . e(csrf()) . '">';
 }
 
+function csrf_valid(): bool {
+    $submitted = $_POST['csrf'] ?? null;
+    return is_string($submitted)
+        && isset($_SESSION['csrf'])
+        && hash_equals($_SESSION['csrf'], $submitted);
+}
+
 function check_csrf(): void {
-    if (!hash_equals(csrf(), (string)($_POST['csrf'] ?? ''))) {
-        http_response_code(403);
-        exit('Form expired. Go back, reload the page, and try again.');
+    if (!csrf_valid()) {
+        flash('Your session changed or expired. Please submit the form again.');
+        $page = basename($_SERVER['SCRIPT_NAME']);
+        $allowed = ['edit.php', 'remove.php', 'logout.php'];
+        if (!in_array($page, $allowed, true)) {
+            $page = 'index.php';
+        }
+        if ($page === 'logout.php' || $page === 'remove.php') {
+            $page = 'account.php';
+        } elseif ($page === 'edit.php' && isset($_GET['id'])) {
+            $page .= '?id=' . (int)$_GET['id'];
+        }
+        redirect($page);
     }
+}
+
+// Prehashing avoids bcrypt's 72-byte limit without restricting password length.
+function hash_password(string $password): string {
+    $prepared = base64_encode(hash('sha384', $password, true));
+    return 'sha384:' . password_hash($prepared, PASSWORD_DEFAULT);
+}
+
+function verify_password(string $password, string $stored): bool {
+    if (str_starts_with($stored, 'sha384:')) {
+        $prepared = base64_encode(hash('sha384', $password, true));
+        return password_verify($prepared, substr($stored, 7));
+    }
+    // Accounts registered before this change retain their existing passwords.
+    return password_verify($password, $stored);
 }
 
 function flash(string $message): void {

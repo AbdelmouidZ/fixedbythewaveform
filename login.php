@@ -5,33 +5,34 @@ if (user()) {
     redirect('account.php');
 }
 $error = '';
-$email = '';
+$username = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    check_csrf();
-    $email = trim((string)($_POST['email'] ?? ''));
+    $username = trim((string)($_POST['username'] ?? ''));
     $attempts = [];
     foreach ($_SESSION['login_attempts'] ?? [] as $time) {
         if ($time > time() - 900) {
             $attempts[] = $time;
         }
     }
-    if (count($attempts) >= 10) {
+    if (!csrf_valid()) {
+        $error = 'Your session changed or expired. Please enter your password and submit again.';
+    } elseif (count($attempts) >= 10) {
         $error = 'Too many attempts. Please try again in 15 minutes.';
     } else {
         $account = mysqli_fetch_assoc(query(
-            'SELECT * FROM users WHERE email = ? AND active = 1',
-            [$email]
+            'SELECT * FROM users WHERE username = ? AND active = 1',
+            [$username]
         ));
-        if ($account && password_verify((string)($_POST['password'] ?? ''), $account['password_hash'])) {
+        if ($account && verify_password((string)($_POST['password'] ?? ''), $account['password_hash'])) {
             session_regenerate_id(true);
             $_SESSION['user_id'] = $account['id'];
-            unset($_SESSION['login_attempts'], $_SESSION['csrf']);
+            unset($_SESSION['login_attempts']);
             redirect('account.php');
         }
         $attempts[] = time();
         $_SESSION['login_attempts'] = $attempts;
-        $error = 'Email or password is incorrect.';
+        $error = 'Username or password is incorrect.';
     }
 }
 
@@ -56,12 +57,12 @@ require 'includes/header.php';
     <form method="post" class="stack">
         <?php token_field(); ?>
         <label>
-            Email
-            <input type="email" name="email" autocomplete="email" required maxlength="190" value="<?= e($email) ?>">
+            Username
+            <input name="username" autocomplete="username" required maxlength="190" value="<?= e($username) ?>">
         </label>
         <label>
             Password
-            <input type="password" name="password" autocomplete="current-password" required maxlength="72">
+            <input type="password" name="password" autocomplete="current-password" required>
         </label>
         <button class="button">
             Log in ↗

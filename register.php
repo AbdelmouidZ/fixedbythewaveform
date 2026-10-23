@@ -4,30 +4,35 @@ require 'includes/bootstrap.php';
 if (user()) {
     redirect('account.php');
 }
+
 $error = '';
-$name = $email = '';
+$username = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    check_csrf();
-    $name = trim((string)($_POST['name'] ?? ''));
-    $email = trim((string)($_POST['email'] ?? ''));
+    $username = trim((string)($_POST['username'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
-    if ($name === '' || mb_strlen($name) > 80 || !filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 190) {
-        $error = 'Enter a name (up to 80 characters) and a valid email address.';
-    } elseif (strlen($password) < 12 || strlen($password) > 72) {
-        $error = 'Use a password between 12 and 72 bytes long.';
-    } elseif ($password !== ($_POST['confirm_password'] ?? '')) {
-        $error = 'Passwords do not match.';
+
+    if (!csrf_valid()) {
+        $error = 'Your session changed or expired. Please enter your password and submit again.';
+    } elseif ($username === '' || mb_strlen($username) > 190) {
+        $error = 'Enter a username of up to 190 characters.';
+    } elseif ($password === '') {
+        $error = 'Enter a password.';
     } else {
-        $created = query( 'INSERT INTO users (name,email,password_hash) VALUES (?,?,?)', [$name, $email, password_hash($password, PASSWORD_DEFAULT)], true);
+        $created = query(
+            'INSERT INTO users (username, password_hash) VALUES (?, ?)',
+            [$username, hash_password($password)],
+            true
+        );
+
         if ($created) {
             session_regenerate_id(true);
             $_SESSION['user_id'] = mysqli_insert_id(db());
-            unset($_SESSION['csrf']);
             flash('You’re in. Welcome to the log.');
             redirect('account.php');
         }
-        $error = 'Unable to register with this email. Try logging in or use another address.';
+
+        $error = 'That username is already taken. Choose another or log in.';
     }
 }
 
@@ -52,23 +57,12 @@ require 'includes/header.php';
     <form method="post" class="stack">
         <?php token_field(); ?>
         <label>
-            Display name
-            <input name="name" autocomplete="nickname" maxlength="80" required value="<?= e($name) ?>">
-        </label>
-        <label>
-            Email
-            <input type="email" name="email" autocomplete="email" maxlength="190" required value="<?= e($email) ?>">
+            Username
+            <input name="username" autocomplete="username" maxlength="190" required value="<?= e($username) ?>">
         </label>
         <label>
             Password
-            <small>
-                12–72 bytes
-            </small>
-            <input type="password" name="password" autocomplete="new-password" minlength="12" maxlength="72" required>
-        </label>
-        <label>
-            Confirm password
-            <input type="password" name="confirm_password" autocomplete="new-password" required maxlength="72">
+            <input type="password" name="password" autocomplete="new-password" required>
         </label>
         <button class="button">
             Create account ↗
