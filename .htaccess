@@ -1,0 +1,6 @@
+Options -Indexes
+<FilesMatch "^(config(?:\.example)?\.php|README\.md|.*\.sql)$">
+    Require all denied
+</FilesMatch>
+RewriteEngine On
+RewriteRule ^(?:includes|database|\.git)(?:/|$) - [F,L]
