@@ -1,3 +1,4 @@
+Disclaimer : This has been vibecoded.
 # Fixed by Waveform
 
 A community log of bugs fixed after being discussed on Waveform’s “Did They Even Test This?” segment.
